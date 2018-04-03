@@ -34,7 +34,7 @@ class App extends Component {
 					To get started, edit <code>src/App.js</code> and save to reload.
 				</p> 
 				<Calendar />
-				<Graph data={this.state.data}/>
+				<div id="graph"><Graph data={this.state.data}/></div>
 			</div>
 		);
 	}
@@ -53,37 +53,85 @@ class Calendar extends Component {
 		super(props);
 		this.state = {
 			date: [], 
+			chosenDates: [],
 		}
 		this.handleSubmit = this.handleSubmit.bind(this);
+		this.handleDate = this.handleDate.bind(this);
 	}
 	render() {
-		const dates = this.state.date.map((date) => <Date key={date.id} value={date} />)
+		const dates = this.state.date.map((date) => {
+			// Only if Antorus; later will add a select feature so the raid of choice can be filtered 
+			if(date.zone === 17) {
+				return <CalendarDate key={date.id} value={date} onChange={this.handleDate}/>
+			}
+		})
 		return (
-			<div className="calendar">
+			<section id="calendar">
 				<GuildForm onSubmit={this.handleSubmit} />
 				<ul className="dates">{dates}</ul>
-			</div>
+			</section>
 		)
 	}
 	handleSubmit(res) {
 		this.setState({date: res});
 	}
+	handleDate(active, id) {
+		if(active) {
+			const chosen = this.state.chosenDates.slice();
+			chosen.push(id);
+			this.setState({
+				chosenDates: chosen,
+			});
+		}
+		else {
+			const chosen = this.state.chosenDates.slice();
+			const new_chosen = chosen.filter(e => e !== id)
+			this.setState({
+				chosenDates: new_chosen,
+			});
+		}
+	}
 }
 
-class Date extends Component {
+class CalendarDate extends Component {
 	constructor(props) {
 		super(props);
 		this.state = {
-			value: null,
+			active: false,
 		};
+		this.toggleActive = this.toggleActive.bind(this);
+	}
+
+	toggleActive() {
+		const currentState = this.state.active;
+		this.setState({active: !currentState});
+		this.props.onChange(!currentState, this.props.value.id);
 	}
 
 	render() {
+		const time = timeConverter(this.props.value.start);
 		return (
-			<li>{this.props.value.title}</li>
+			<li className={this.state.active ? 'active' : ''} onClick={this.toggleActive}>
+				<div className="raid_name">{this.props.value.title}</div>
+				<div className="raid_owner">{this.props.value.owner}</div>
+				<div className="raid_time">{time}</div> 
+			</li>
 		)
 	}
 }
+function timeConverter(UNIX_timestamp){
+	var a = new Date(UNIX_timestamp);
+	var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+	var year = a.getFullYear();
+	var month = months[a.getMonth()];
+	var date = a.getDate();
+	var hour = a.getHours();
+	var min = a.getMinutes();
+	var sec = a.getSeconds();
+	var time = date + ' ' + month + ' ' + year + ' ' + hour + ':' + min;
+	return time;
+ }
+
 
 class UserForm extends Component {
 	constructor(props) {

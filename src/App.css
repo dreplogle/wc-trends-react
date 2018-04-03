@@ -26,3 +26,42 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Calendar css */
+#calendar {
+	max-width: 1280px;
+	margin: 0 auto;
+}
+#calendar ul {
+	text-align: left;
+	list-style: none;
+}
+#calendar ul li {
+	display: inline-block;
+	width: 150px;
+	height: 50px;
+	border: 1px solid #000000;
+	overflow: hidden;
+	font-size: 14px;
+	font-family: Helvetica;
+	cursor: pointer;
+}
+#calendar ul li:hover {
+	background-color: #dddddd;
+}
+#calendar ul li.active {
+	background-color: #cccccc;
+}
+#calendar .raid_name {
+	top: 0px;
+	white-space: nowrap;
+}
+#calendar .raid_owner {
+	bottom: 0px;
+}
+
+
+#graph {
+	width: 500px;
+	height: 500px; 
+}
