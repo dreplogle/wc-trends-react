@@ -34,7 +34,7 @@ class App extends Component {
 					To get started, edit <code>src/App.js</code> and save to reload.
 				</p> 
 				<Calendar />
-				<div id="graph"><Graph data={this.state.data}/></div>
+				{/* <div id="graph"><Graph data={this.state.data}/></div> */}
 			</div>
 		);
 	}
@@ -54,6 +54,9 @@ class Calendar extends Component {
 		this.state = {
 			date: [], 
 			chosenDates: [],
+			fight_data: {},
+			xaxis: [],
+			yaxis: [],
 		}
 		this.handleSubmit = this.handleSubmit.bind(this);
 		this.handleDate = this.handleDate.bind(this);
@@ -65,10 +68,13 @@ class Calendar extends Component {
 				return <CalendarDate key={date.id} value={date} onChange={this.handleDate}/>
 			}
 		})
+		const graph = this.state.fight_data ? <BarGraph xaxis={this.state.xaxis} yaxis={this.state.yaxis}/> : null;
+
 		return (
 			<section id="calendar">
 				<GuildForm onSubmit={this.handleSubmit} />
 				<ul className="dates">{dates}</ul>
+				<div className="graph">{graph}</div>
 			</section>
 		)
 	}
@@ -82,6 +88,26 @@ class Calendar extends Component {
 			this.setState({
 				chosenDates: chosen,
 			});
+			let fights = this.state.fight_data;
+			if(!fights.hasOwnProperty(id)) {
+				api_call("fights/" + id, res => {
+					fights[id] = res;
+					const xaxis = this.state.xaxis;
+					const yaxis = this.state.yaxis;
+					var bosses = ['Garothi', 'Hounds', 'Triad', 'Eonar', 'Portal Keeper', 'Imonar', "Kin'goroth", 'Varimathras', 'Coven', 'Aggramar', 'Argus']
+					// For each fight in the hash
+					Object.keys(fights).forEach(function (key) { 
+						let raid = fights[key].fights;
+						// For each fight in the raid
+						Object.keys(raid).forEach(function(fight){
+							console.log(raid[fight]);
+						})
+					})
+				})
+			}
+			
+			this.setState({fight_data: fights});
+			
 		}
 		else {
 			const chosen = this.state.chosenDates.slice();
@@ -90,6 +116,58 @@ class Calendar extends Component {
 				chosenDates: new_chosen,
 			});
 		}
+	}
+}
+class BarGraph extends Component {
+	constructor(props) {
+		super(props);
+		this.state = {
+			chart: {},
+		}
+	}
+	componentDidMount() {
+		
+		let newChart = this.createGraph();
+		this.setState({chart: newChart});	 
+	}
+	createGraph(data) {
+		const canvas = document.getElementById("chart");
+		var newChart = new Chart(canvas, {
+			type: 'bar',
+			data: data,
+			options: {
+				legend: {
+					display: false
+				},
+				scales: {
+					xAxes: [{
+						display: true,
+					}],
+					yAxes: [{
+						display: true,
+						ticks: {
+							min: 0,
+							max: 100
+						}
+					}],
+				}
+			}
+		});
+		return newChart;
+	}
+	// componentDidUpdate () {
+	// 	let chart = this.state.chart;
+	// 	let data = this.props.data;
+	
+	// 	data.datasets.forEach((dataset, i) => chart.data.datasets[i].data = dataset.data);
+	
+	// 	chart.data.labels = data.labels;
+	// 	chart.update();
+	// }
+
+	
+	render() {
+		return <canvas id="chart" refs="chart"></canvas>
 	}
 }
 
@@ -236,6 +314,12 @@ class GuildForm extends Component {
 }
 
 class Graph extends Component {
+	constructor(props) {
+		super(props);
+		this.state = {
+			chart: {},
+		}
+	}
 	componentDidMount() {
 		let newChart = this.createGraph(this.props.data);
 		this.setState({chart: newChart});	 
@@ -274,12 +358,7 @@ class Graph extends Component {
 		chart.data.labels = data.labels;
 		chart.update();
 	}
-	constructor(props) {
-		super(props);
-		this.state = {
-			chart: {},
-		}
-	}
+
 	
 	render() {
 		return <canvas id="chart" refs="chart"></canvas>
