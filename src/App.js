@@ -5,6 +5,16 @@ import logo from './logo.svg';
 import './App.css';
 import {api_call} from './api/api.js';
 
+window.chartColors = {
+	red: 'rgb(255, 99, 132)',
+	orange: 'rgb(255, 159, 64)',
+	yellow: 'rgb(255, 205, 86)',
+	green: 'rgb(75, 192, 192)',
+	blue: 'rgb(54, 162, 235)',
+	purple: 'rgb(153, 102, 255)',
+	grey: 'rgb(231,233,237)'
+};
+
 class App extends Component {
 	constructor(props) {
 		super(props)
@@ -52,8 +62,9 @@ class Calendar extends Component {
 	constructor(props) {
 		super(props);
 		this.state = {
+			search: false,
 			date: [], 
-			chosenDates: [],
+			chosen_dates: [],
 			fight_data: {},
 			xaxis: [],
 			yaxis: [],
@@ -67,53 +78,66 @@ class Calendar extends Component {
 			if(date.zone === 17) {
 				return <CalendarDate key={date.id} value={date} onChange={this.handleDate}/>
 			}
+			else return null;
 		})
-		const graph = this.state.fight_data ? <BarGraph xaxis={this.state.xaxis} yaxis={this.state.yaxis}/> : null;
-
+		const graph = (this.state.search) ? <BarGraph xaxis={this.state.xaxis} yaxis={this.state.yaxis}></BarGraph> : null;
 		return (
 			<section id="calendar">
 				<GuildForm onSubmit={this.handleSubmit} />
 				<ul className="dates">{dates}</ul>
-				<div className="graph">{graph}</div>
+				{graph}
 			</section>
 		)
 	}
 	handleSubmit(res) {
 		this.setState({date: res});
 	}
+
 	handleDate(active, id) {
+		// Logic for if the date was selected; else should contain for if date was not selected
 		if(active) {
-			const chosen = this.state.chosenDates.slice();
+			const chosen = this.state.chosen_dates.slice();
 			chosen.push(id);
-			this.setState({
-				chosenDates: chosen,
-			});
 			let fights = this.state.fight_data;
+			let num_fights = {};
 			if(!fights.hasOwnProperty(id)) {
 				api_call("fights/" + id, res => {
-					fights[id] = res;
-					const xaxis = this.state.xaxis;
-					const yaxis = this.state.yaxis;
-					var bosses = ['Garothi', 'Hounds', 'Triad', 'Eonar', 'Portal Keeper', 'Imonar', "Kin'goroth", 'Varimathras', 'Coven', 'Aggramar', 'Argus']
-					// For each fight in the hash
+					fights[id] = res;	
+					// console.log(fights);
+					// const xaxis = this.state.xaxis;
+					// const yaxis = this.state.yaxis;
+					// var bosses = ['Garothi', 'Hounds', 'Triad', 'Eonar', 'Portal Keeper', 'Imonar', "Kin'goroth", 'Varimathras', 'Coven', 'Aggramar', 'Argus']
+
+					
+					// For each raid in the hash
 					Object.keys(fights).forEach(function (key) { 
 						let raid = fights[key].fights;
 						// For each fight in the raid
 						Object.keys(raid).forEach(function(fight){
-							console.log(raid[fight]);
+							var boss_name = raid[fight].name;
+							var boss_id = raid[fight].boss;
+							// If boss fight occurred, tally into total number of fights
+							if(boss_id !== 0) {
+								// console.log(num_fights);
+								num_fights[boss_name] = (num_fights[boss_name] || 0) + 1;
+							}
 						})
 					})
+					let xaxis = [];
+					let yaxis = [];
+					Object.keys(num_fights).forEach(function(key) {
+						yaxis.push(key);
+						xaxis.push(num_fights[key]);
+					});
+					this.setState({fight_data: fights, chosen_dates: chosen, xaxis: xaxis, yaxis: yaxis, search: true});
 				})
 			}
-			
-			this.setState({fight_data: fights});
-			
 		}
 		else {
-			const chosen = this.state.chosenDates.slice();
+			const chosen = this.state.chosen_dates.slice();
 			const new_chosen = chosen.filter(e => e !== id)
 			this.setState({
-				chosenDates: new_chosen,
+				chosen_dates: new_chosen,
 			});
 		}
 	}
@@ -126,18 +150,27 @@ class BarGraph extends Component {
 		}
 	}
 	componentDidMount() {
-		
-		let newChart = this.createGraph();
+		let newChart = this.createGraph(this.props.xaxis, this.props.yaxis);
 		this.setState({chart: newChart});	 
 	}
-	createGraph(data) {
+	createGraph(xaxis, yaxis) {
 		const canvas = document.getElementById("chart");
+		var color = Chart.helpers.color;
 		var newChart = new Chart(canvas, {
 			type: 'bar',
-			data: data,
+			data: {
+				labels: yaxis,
+				datasets: [{
+					label: 'Number of Fights',
+					backgroundColor: color(window.chartColors.blue).alpha(0.5).rgbString(),
+					borderColor: window.chartColors.blue,
+					borderWidth: 1,
+					data: xaxis,
+				}]
+			}, 
 			options: {
 				legend: {
-					display: false
+					display: false 
 				},
 				scales: {
 					xAxes: [{
@@ -147,7 +180,8 @@ class BarGraph extends Component {
 						display: true,
 						ticks: {
 							min: 0,
-							max: 100
+							max: 40,
+							padding: 5,
 						}
 					}],
 				}
@@ -155,15 +189,15 @@ class BarGraph extends Component {
 		});
 		return newChart;
 	}
-	// componentDidUpdate () {
-	// 	let chart = this.state.chart;
-	// 	let data = this.props.data;
-	
-	// 	data.datasets.forEach((dataset, i) => chart.data.datasets[i].data = dataset.data);
-	
-	// 	chart.data.labels = data.labels;
-	// 	chart.update();
-	// }
+	componentDidUpdate () {
+
+		let chart = this.state.chart;
+
+		// // data.datasets.forEach((dataset, i) => chart.data.datasets[i].data = dataset.data);
+		chart.data.datasets[0].data = this.props.xaxis;
+		chart.data.labels = this.props.yaxis;
+		chart.update();
+	}
 
 	
 	render() {
