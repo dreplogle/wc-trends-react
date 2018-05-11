@@ -1,3 +1,4 @@
+// ToDo: set this with webpack
 const api_root = "http://localhost:4000/report/"
 
 export function api_call(req, handler) {
